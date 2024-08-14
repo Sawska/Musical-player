@@ -29,3 +29,16 @@ void Album::shafl() {
         order_of_songs.push(song);
     }
 }
+
+
+void Album::album_liked() {
+    status_of_liked = 1;
+}
+
+void Album::album_disliked() {
+    status_of_liked = -1;
+}
+
+void Album::album_reset() {
+    status_of_liked = 0;
+}

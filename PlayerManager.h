@@ -4,8 +4,10 @@
 #include <string>
 #include <vector>
 #include "Music.h"
-#include "Album.h"
+#include "Album.cpp"
 #include "PlayingQueue.h"
+#include <iostream>
+#include <pqxx/pqxx>
 
 class PlayerManager {
 public:
@@ -24,13 +26,21 @@ public:
     void load_albums();
     void update_song(const Music& music);
     void update_album(const Album& album);
-    std::vector<std::string> load_filtered_song(FilterType filter);
-    
+    void create_table_music();
+    void create_table_album();
+    void add_real_music_to_album(const Album& album);
+    std::vector<Music> load_filtered_song(FilterType filter);
+    std::vector<Album> load_filtered_albums(FilterType filter);
+
+    PlayerManager() 
+        : connection("postgresql://music_player@localhost") 
+    {}
 
 private:
     std::vector<Album> albums;
     std::vector<Music> music;
     PlayingQueue playing_queue;
+    pqxx::connection connection;
 };
 
 #endif
