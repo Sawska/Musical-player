@@ -24,12 +24,12 @@ void PlayerManager::create_table_music() {
         "time_to_listen INT, "
         "name VARCHAR(255), "
         "author VARCHAR(255), "
-        "path_to_file VARCHAR(255), "
-        "album_parents JSON)"
+        "path_to_file VARCHAR(255))"
     );
 
     txn.commit();
 }
+
 
 
 void PlayerManager::create_table_album() {
@@ -40,12 +40,39 @@ void PlayerManager::create_table_album() {
         "id SERIAL PRIMARY KEY, "
         "status_of_liked INT, "
         "time_to_listen INT, "
-        "name VARCHAR(255), "
-        "album_songs JSON)"
+        "name VARCHAR(255))"
     );
 
     txn.commit();
 }
+
+void PlayerManager::create_table_album_music() {
+    pqxx::work txn{connection};
+
+    txn.exec(
+        "CREATE TABLE IF NOT EXISTS ALBUM_MUSIC ("
+        "album_id INT REFERENCES ALBUMS(id) ON DELETE CASCADE, "
+        "music_id INT REFERENCES MUSIC(id) ON DELETE CASCADE, "
+        "PRIMARY KEY (album_id, music_id))"
+    );
+
+    txn.commit();
+}
+
+void PlayerManager::add_music_to_album(int album_id, int music_id) {
+    pqxx::work txn{connection};
+
+    txn.exec_params(
+        "INSERT INTO ALBUM_MUSIC (album_id, music_id) VALUES ($1, $2)",
+        album_id,
+        music_id
+    );
+
+    txn.commit();
+}
+
+
+
 
 
 std::vector<Album> PlayerManager::load_filtered_albums(FilterType filter) {
@@ -63,7 +90,7 @@ std::vector<Album> PlayerManager::load_filtered_albums(FilterType filter) {
 void PlayerManager::update_song(const Music& music) {
     pqxx::work txn{connection};
 
-    nlohmann::json album_parents_json = music.album_parents;
+    
 
     txn.exec_params(
         "UPDATE MUSIC SET "
@@ -72,14 +99,12 @@ void PlayerManager::update_song(const Music& music) {
         "name = $3, "
         "author = $4, "
         "path_to_file = $5, "
-        "album_parents = $6 "
-        "WHERE name = $7 AND author = $8",
+        "WHERE name = $6 AND author = $7",
         music.status_of_liked,
         music.time_to_listen,
         music.name,
         music.author,
         music.path_to_file,
-        album_parents_json.dump(),
         music.name,
         music.author
     );
@@ -126,17 +151,15 @@ void PlayerManager::remove_music_from_db(const std::string& music_name) {
 void PlayerManager::add_music(const Music& music) {
     pqxx::work txn{connection};
 
-    nlohmann::json album_parents_json = music.album_parents;
 
     txn.exec_params(
-        "INSERT INTO MUSIC (status_of_liked, time_to_listen, name, author, path_to_file, album_parents) "
+        "INSERT INTO MUSIC (status_of_liked, time_to_listen, name, author, path_to_file) "
         "VALUES ($1, $2, $3, $4, $5, $6)",
         music.status_of_liked,
         music.time_to_listen,
         music.name,
         music.author,
-        music.path_to_file,
-        album_parents_json.dump()
+        music.path_to_file
     );
 
     txn.commit();   
@@ -146,21 +169,24 @@ void PlayerManager::add_music(const Music& music) {
 void PlayerManager::load_songs() {
     pqxx::work txn{connection};
 
-    for (auto [name, author, status_of_liked, time_to_listen, path_to_file, album_parents_json] : 
-         txn.query<std::string, std::string, int, int, std::string, std::string>(
-             "SELECT name, author, status_of_liked, time_to_listen, path_to_file, album_parents FROM MUSIC"))
-    {
-        Music music;
-        music.name = name;
-        music.author = author;
-        music.status_of_liked = status_of_liked;
-        music.time_to_listen = time_to_listen;
-        music.path_to_file = path_to_file;
-        music.album_parents = nlohmann::json::parse(album_parents_json).get<std::vector<std::string>>();
+    pqxx::result result = txn.exec(
+        "SELECT name, author, status_of_liked, time_to_listen, path_to_file FROM MUSIC"
+    );
 
-        this->music.push_back(music); 
+    for (const auto& row : result) {
+        Music music;
+        music.name = row["name"].as<std::string>();
+        music.author = row["author"].as<std::string>();
+        music.status_of_liked = row["status_of_liked"].as<int>();
+        music.time_to_listen = row["time_to_listen"].as<int>();
+        music.path_to_file = row["path_to_file"].as<std::string>();
+
+        this->music.push_back(music);
     }
+
+    txn.commit();
 }
+
 
 void PlayerManager::delete_music(const std::string& music_path) {
     if (std::filesystem::exists(music_path)) { 
@@ -171,38 +197,59 @@ void PlayerManager::delete_music(const std::string& music_path) {
 void PlayerManager::add_real_music_to_album(const Album& album) {
     pqxx::work txn{connection};
 
-    for (const std::string& song_name : album.album_songs_for_db) {
-        for (auto [name, author, status_of_liked, time_to_listen, path_to_file, album_parents_json] : 
-             txn.query<std::string, std::string, int, int, std::string, std::string>(
-                 "SELECT name, author, status_of_liked, time_to_listen, path_to_file, album_parents "
-                 "FROM MUSIC WHERE name = $1", song_name))
-        {
-            Music music;
-            music.name = name;
-            music.author = author;
-            music.status_of_liked = status_of_liked;
-            music.time_to_listen = time_to_listen;
-            music.path_to_file = path_to_file;
-            music.album_parents = nlohmann::json::parse(album_parents_json).get<std::vector<std::string>>();
 
-            const_cast<Album&>(album).album_songs.push_back(music); 
+    int album_id;
+    pqxx::result album_id_result = txn.exec_params(
+        "SELECT id FROM ALBUMS WHERE name = $1", album.name);
+    
+    if (album_id_result.size() > 0) {
+        album_id = album_id_result[0]["id"].as<int>();
+    } else {
+        std::cerr << "Album not found in the database." << std::endl;
+        return;
+    }
+
+
+    pqxx::result music_ids_result = txn.exec_params(
+        "SELECT music_id FROM ALBUM_MUSIC WHERE album_id = $1", album_id);
+    
+    for (const auto& row : music_ids_result) {
+        int music_id = row["music_id"].as<int>();
+
+        
+        pqxx::result music_result = txn.exec_params(
+            "SELECT name, author, status_of_liked, time_to_listen, path_to_file "
+            "FROM MUSIC WHERE id = $1", music_id);
+        
+        if (music_result.size() > 0) {
+            const auto& music_row = music_result[0];
+
+            Music music;
+            music.name = music_row["name"].as<std::string>();
+            music.author = music_row["author"].as<std::string>();
+            music.status_of_liked = music_row["status_of_liked"].as<int>();
+            music.time_to_listen = music_row["time_to_listen"].as<int>();
+            music.path_to_file = music_row["path_to_file"].as<std::string>();
+
+        
+            const_cast<Album&>(album).album_songs.push_back(music);
         }
     }
 
     txn.commit();
 }
 
+
 void PlayerManager::add_album(const Album& album) {
     pqxx::work txn{connection};
 
-    nlohmann::json songs = album.album_songs_for_db;
+    
 
     txn.exec_params(
-        "INSERT INTO ALBUMS (name, time_to_listen, album_songs, status_of_liked) "
+        "INSERT INTO ALBUMS (name, time_to_listen,status_of_liked) "
         "VALUES ($1, $2, $3, $4)",
         album.name,
         album.time_to_listen,
-        songs.dump(),
         album.status_of_liked
     );
 
@@ -211,16 +258,14 @@ void PlayerManager::add_album(const Album& album) {
 
 void PlayerManager::update_album(const Album& album) {
     pqxx::work txn{connection};   
-    nlohmann::json songs = album.album_songs_for_db;
+    
 
     txn.exec_params(
         "UPDATE ALBUMS SET "
         "time_to_listen = $1, "
-        "album_songs = $2, "
-        "status_of_liked = $3 "
-        "WHERE name = $4",
+        "status_of_liked = $2 "
+        "WHERE name = $3",
         album.time_to_listen,
-        songs.dump(),
         album.status_of_liked,
         album.name
     );
@@ -233,7 +278,7 @@ void PlayerManager::load_albums() {
 
 
     auto result = txn.exec(
-        "SELECT name, status_of_liked, time_to_listen, album_songs FROM ALBUMS"
+        "SELECT name, status_of_liked, time_to_listen FROM ALBUMS"
     );
 
 
@@ -242,18 +287,13 @@ void PlayerManager::load_albums() {
         std::string name = row["name"].c_str();
         int status_of_liked = row["status_of_liked"].as<int>();
         int time_to_listen = row["time_to_listen"].as<int>();
-        std::string album_songs_json = row["album_songs"].c_str();
-
-
-        std::vector<std::string> album_songs_for_db = nlohmann::json::parse(album_songs_json).get<std::vector<std::string>>();
-
-
         Album album(name);
         album.status_of_liked = status_of_liked;
         album.time_to_listen = time_to_listen;
-        album.album_songs_for_db = album_songs_for_db;
+
         this->add_real_music_to_album(album);
 
         this->albums.push_back(album);
     }
 }
+

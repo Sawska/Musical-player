@@ -42,3 +42,4 @@ void Album::album_disliked() {
 void Album::album_reset() {
     status_of_liked = 0;
 }
+

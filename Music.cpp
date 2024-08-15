@@ -1,5 +1,25 @@
 #include "Music.h"
 
+
+void Music::playMusic() {
+    sf::SoundBuffer buffer;
+
+    if (!buffer.loadFromFile(path_to_file)) {
+        std::cerr << "Error loading WAV file" << std::endl;
+        return;
+    }
+
+
+    sf::Sound sound;
+
+    sound.setBuffer(buffer);
+    sound.play();
+
+    while (sound.getStatus() == sf::Sound::Playing) {
+        sf::sleep(sf::milliseconds(100));
+    }
+}
+
 bool Music::check_if_song_already_in_album(const std::string& album_name)  const {
     for(std::string album_entry : album_parents) {
         if(album_entry == album_name) {

@@ -1,5 +1,5 @@
 #ifndef PLAYING_QUEUE_H
-#define PLAYING_QUEUE_H
+#define PLAYING_QUEUE_H 
 
 #include <queue>
 #include "Music.h"

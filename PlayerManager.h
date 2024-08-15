@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "Music.h"
-#include "Album.cpp"
+#include "Album.h"
 #include "PlayingQueue.h"
 #include <iostream>
 #include <pqxx/pqxx>
@@ -15,7 +15,8 @@ public:
         LIKED = 1,
         DISLIKED = -1
     };
-
+    void create_table_album_music();
+    void add_music_to_album(int album_id, int music_id);
     void add_music(const Music& music);
     void remove_music_from_db(const std::string& music_name);
     void add_album(const Album& album);

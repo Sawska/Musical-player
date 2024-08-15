@@ -5,7 +5,7 @@
 #include <vector>
 #include "Music.h"
 #include <queue>
-#include <PlayingQueue.cpp>
+#include "PlayingQueue.h"
 #include <random>
 #include <set>
 
@@ -14,7 +14,6 @@ class Album {
     std::string name;
     int time_to_listen;
     std::vector<Music> album_songs;
-    std::vector<std::string> album_songs_for_db;
     int status_of_liked;
     PlayingQueue order_of_songs;
 

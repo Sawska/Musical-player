@@ -23,14 +23,14 @@ private:
 
 enum
 {
-    ID_Options_AddMusic = 1,
-    ID_Options_AddAlbum,
-    ID_Options_SearchMusic,
-    ID_Options_SearchAlbum,
-    ID_Options_RemoveMusic,
-    ID_Options_DeleteMusic,
-    ID_Options_RemoveAlbum,
-    ID_Options_DeleteAlbum
+    ID_Options_AddMusic = 0,
+    ID_Options_AddAlbum = 1,
+    ID_Options_SearchMusic = 2,
+    ID_Options_SearchAlbum = 3,
+    ID_Options_RemoveMusic = 4,
+    ID_Options_DeleteMusic = 5,
+    ID_Options_RemoveAlbum = 6,
+    ID_Options_DeleteAlbum = 7
 };
 
 bool MyApp::OnInit()
