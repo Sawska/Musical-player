@@ -1,6 +1,7 @@
 
 #include <wx/wx.h>
 
+
 class MyApp : public wxApp
 {
 public:
@@ -23,14 +24,14 @@ private:
 
 enum
 {
-    ID_Options_AddMusic = 0,
-    ID_Options_AddAlbum = 1,
-    ID_Options_SearchMusic = 2,
-    ID_Options_SearchAlbum = 3,
-    ID_Options_RemoveMusic = 4,
-    ID_Options_DeleteMusic = 5,
-    ID_Options_RemoveAlbum = 6,
-    ID_Options_DeleteAlbum = 7
+    ID_Options_AddMusic = 1,
+    ID_Options_AddAlbum = 2,
+    ID_Options_SearchMusic = 3,
+    ID_Options_SearchAlbum = 4,
+    ID_Options_RemoveMusic = 5,
+    ID_Options_DeleteMusic = 6,
+    ID_Options_RemoveAlbum = 7,
+    ID_Options_DeleteAlbum = 8
 };
 
 bool MyApp::OnInit()
@@ -108,3 +109,5 @@ void MyFrame::OnAlbum(wxCommandEvent& event)
 {
     wxLogMessage("Opened album menu");
 }
+
+

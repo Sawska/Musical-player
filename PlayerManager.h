@@ -9,14 +9,15 @@
 #include <iostream>
 #include <pqxx/pqxx>
 
-class PlayerManager {
-public:
     enum FilterType {
         LIKED = 1,
         DISLIKED = -1
     };
+class PlayerManager {
+public:
     void create_table_album_music();
-    void add_music_to_album(int album_id, int music_id);
+    void add_music_to_album(const Album& album, const Music& music);
+
     void add_music(const Music& music);
     void remove_music_from_db(const std::string& music_name);
     void add_album(const Album& album);
@@ -35,11 +36,15 @@ public:
 
     PlayerManager() 
         : connection("postgresql://music_player@localhost") 
-    {}
+    {
+        create_table_album();
+        create_table_music();
+        create_table_album_music();
+    }
 
-private:
     std::vector<Album> albums;
     std::vector<Music> music;
+private:
     PlayingQueue playing_queue;
     pqxx::connection connection;
 };

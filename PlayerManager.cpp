@@ -2,6 +2,7 @@
 #include <nlohmann/json.hpp>
 
 
+
 std::vector<Music> PlayerManager::load_filtered_song(FilterType filter) {
     std::vector<Music> filtered_copy;
 
@@ -59,8 +60,34 @@ void PlayerManager::create_table_album_music() {
     txn.commit();
 }
 
-void PlayerManager::add_music_to_album(int album_id, int music_id) {
+void PlayerManager::add_music_to_album(const Album& album, const Music& music) {
     pqxx::work txn{connection};
+
+
+    pqxx::result album_res = txn.exec_params(
+        "SELECT id FROM ALBUM WHERE name = $1",
+        album.name
+    );
+
+    if (album_res.empty()) {
+        throw std::runtime_error("Album not found");
+    }
+
+    int album_id = album_res[0]["id"].as<int>();
+
+
+    pqxx::result music_res = txn.exec_params(
+        "SELECT id FROM MUSIC WHERE name = $1 AND author = $2",
+        music.name,
+        music.author
+    );
+
+    if (music_res.empty()) {
+        throw std::runtime_error("Music not found");
+    }
+
+    int music_id = music_res[0]["id"].as<int>();
+
 
     txn.exec_params(
         "INSERT INTO ALBUM_MUSIC (album_id, music_id) VALUES ($1, $2)",
@@ -70,6 +97,7 @@ void PlayerManager::add_music_to_album(int album_id, int music_id) {
 
     txn.commit();
 }
+
 
 
 
@@ -296,4 +324,5 @@ void PlayerManager::load_albums() {
         this->albums.push_back(album);
     }
 }
+
 

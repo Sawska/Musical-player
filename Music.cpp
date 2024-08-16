@@ -20,14 +20,7 @@ void Music::playMusic() {
     }
 }
 
-bool Music::check_if_song_already_in_album(const std::string& album_name)  const {
-    for(std::string album_entry : album_parents) {
-        if(album_entry == album_name) {
-            return true;
-        }
-    }
-    return false;
-}
+
 
 void Music::song_liked() {
     status_of_liked = 1;
