@@ -9,12 +9,18 @@
 #include "Music.h"
 #include "Album.h"
 
+enum class FrameState {
+    MAIN_MENU,
+    SONG_LIST,
+    ALBUM_LIST,
+    ALBUM_SONGS
+};
+
 
 class MyApp : public wxApp
 {
 public:
     bool OnInit() override;
-    PlayerManager pm;
 
 };
 
@@ -24,6 +30,8 @@ class MyFrame : public wxFrame
 {
 public:
     MyFrame();
+    std::stack<wxSizer*> previousStates;
+    PlayerManager pm;
 
 
 private:
@@ -33,6 +41,22 @@ private:
     void OnAbout(wxCommandEvent& event);
     void OnButtonClick(wxCommandEvent& event);
     void MyFrame::DisplaySongs();
+    void MyFrame::DisplayAlbumSongs(const Album& album);
+    void MyFrame::DisplayAlbum();
+    void MyFrame::OnPlayButton(wxCommandEvent& event);
+    void MyFrame::OnPlayAlbumButton(wxCommandEvent& event);
+    void MyFrame::OnSettingsButton(wxCommandEvent& event);
+    void MyFrame::OnSettingsButtonAlbum(wxCommandEvent& event);
+    void MyFrame::OnLikeButton(wxCommandEvent& event);
+    void MyFrame::OnLikeAlbumButton(wxCommandEvent& event);
+    void MyFrame::OnAddToQueueButton(wxCommandEvent& event);
+    
+    
+    FrameState currentState;
+    FrameState previousState;
+    
+    void OnBackButton(wxCommandEvent& event);
+
 
     wxPanel* sidebarPanel;
     wxPanel* mainPanel;
@@ -98,11 +122,11 @@ MyFrame::MyFrame()
     SetMenuBar(menuBar);
     CreateStatusBar();
 
-    // Panel and control initialization
+    
     sidebarPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxSize(200, -1), wxBORDER_SIMPLE);
     mainPanel = new wxPanel(this, wxID_ANY);
 
-    // Button dimensions
+    
     int buttonWidth = 50;
     int buttonHeight = 50;
 
@@ -114,7 +138,7 @@ MyFrame::MyFrame()
     btnSearchMusic = new wxBitmapButton(sidebarPanel, wxID_ANY, SearchBitmap);
     btnAlbum = new wxBitmapButton(sidebarPanel, wxID_ANY, AlbumBitmap);
 
-    // Create labels for sidebar buttons
+    
     wxStaticText* lblMusic = new wxStaticText(sidebarPanel, wxID_ANY, "Music");
     wxStaticText* lblSearchMusic = new wxStaticText(sidebarPanel, wxID_ANY, "Search");
     wxStaticText* lblAlbum = new wxStaticText(sidebarPanel, wxID_ANY, "Album");
@@ -209,10 +233,461 @@ void MyFrame::OnButtonClick(wxCommandEvent& event)
     wxMessageBox("Button clicked", "Info", wxOK | wxICON_INFORMATION);
 }
 
+void MyFrame::DisplaySongs()
+{
+    previousState = currentState;
+    currentState = FrameState::SONG_LIST;
+
+    mainPanel->DestroyChildren();
+    pm.load_songs();
+
+    wxBoxSizer* songListSizer = new wxBoxSizer(wxVERTICAL);
+    int buttonWidth = 25;
+    int buttonHeight = 25;
+
+    wxBitmap playBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/play.png", buttonWidth, buttonHeight);
+    wxBitmap settingsBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/settings.png", buttonWidth, buttonHeight);
+    wxBitmap likeBitmap;
+
+    for (const Music& music : pm.music) {
+        wxBoxSizer* songSizer = new wxBoxSizer(wxHORIZONTAL);
+
+        wxStaticText* songName = new wxStaticText(mainPanel, wxID_ANY, wxString::Format("Name: %s", music.name.c_str()));
+        wxStaticText* authorName = new wxStaticText(mainPanel, wxID_ANY, wxString::Format("Author: %s", music.author.c_str()));
+        wxStaticText* playingTime = new wxStaticText(mainPanel, wxID_ANY, wxString::Format("Playing time: %s", music.listen_time.c_str()));
+
+        wxBitmapButton* playButton = new wxBitmapButton(mainPanel, wxID_ANY, playBitmap);
+        wxBitmapButton* settingsButton = new wxBitmapButton(mainPanel, wxID_ANY, settingsBitmap);
+
+        if (music.status_of_liked == 1) {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/liked.png", buttonWidth, buttonHeight);
+        } else if (music.status_of_liked == -1) {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/disliked.png", buttonWidth, buttonHeight);
+        } else {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/reset.png", buttonWidth, buttonHeight);
+        }
+        wxBitmapButton* likeButton = new wxBitmapButton(mainPanel, wxID_ANY, likeBitmap);
+
+
+        playButton->Bind(wxEVT_BUTTON, &MyFrame::OnPlayButton, this);
+        settingsButton->Bind(wxEVT_BUTTON, &MyFrame::OnSettingsButton, this);
+        likeButton->Bind(wxEVT_BUTTON, &MyFrame::OnLikeButton, this);
+
+        songSizer->Add(playButton, 0, wxALL, 5);
+        songSizer->Add(songName, 1, wxALL | wxEXPAND, 5);
+        songSizer->Add(authorName, 1, wxALL | wxEXPAND, 5);
+        songSizer->Add(playingTime, 1, wxALL | wxEXPAND, 5);
+        songSizer->Add(likeButton, 0, wxALL, 5);
+        songSizer->Add(settingsButton, 0, wxALL, 5);
+
+        songListSizer->Add(songSizer, 0, wxEXPAND | wxALL, 5);
+    }
+
+    mainPanel->SetSizer(songListSizer);
+    mainPanel->Layout();
+    mainPanel->Refresh();
+}
+
+void MyFrame::DisplayAlbumSongs(const Album& album)
+{
+    previousState = currentState;
+    currentState = FrameState::ALBUM_SONGS;
+    mainPanel->DestroyChildren();
+    pm.load_songs();
+
+    wxBoxSizer* songListSizer = new wxBoxSizer(wxVERTICAL);
+    int buttonWidth = 25;
+    int buttonHeight = 25;
+
+    wxBitmap playBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/play.png", buttonWidth, buttonHeight);
+    wxBitmap settingsBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/settings.png", buttonWidth, buttonHeight);
+    wxBitmap likeBitmap;
+
+    wxButton* backButton = new wxButton(mainPanel, wxID_ANY, "Back");
+    backButton->Bind(wxEVT_BUTTON, &MyFrame::OnBackButton, this);
+
+    for (const Music& music : album.album_songs) {
+        wxBoxSizer* songSizer = new wxBoxSizer(wxHORIZONTAL);
+
+        wxStaticText* songName = new wxStaticText(mainPanel, wxID_ANY, wxString::Format("Name: %s", music.name.c_str()));
+        wxStaticText* authorName = new wxStaticText(mainPanel, wxID_ANY, wxString::Format("Author: %s", music.author.c_str()));
+        wxStaticText* playingTime = new wxStaticText(mainPanel, wxID_ANY, wxString::Format("Playing time: %s", music.listen_time.c_str()));
+
+        wxBitmapButton* playButton = new wxBitmapButton(mainPanel, wxID_ANY, playBitmap);
+        wxBitmapButton* settingsButton = new wxBitmapButton(mainPanel, wxID_ANY, settingsBitmap);
+
+        if (music.status_of_liked == 1) {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/liked.png", buttonWidth, buttonHeight);
+        } else if (music.status_of_liked == -1) {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/disliked.png", buttonWidth, buttonHeight);
+        } else {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/reset.png", buttonWidth, buttonHeight);
+        }
+        wxBitmapButton* likeButton = new wxBitmapButton(mainPanel, wxID_ANY, likeBitmap);
+
+
+        playButton->Bind(wxEVT_BUTTON, &MyFrame::OnPlayButton, this);
+        settingsButton->Bind(wxEVT_BUTTON, &MyFrame::OnSettingsButton, this);
+        likeButton->Bind(wxEVT_BUTTON, &MyFrame::OnLikeButton, this);
+
+        songSizer->Add(playButton, 0, wxALL, 5);
+        songSizer->Add(songName, 1, wxALL | wxEXPAND, 5);
+        songSizer->Add(authorName, 1, wxALL | wxEXPAND, 5);
+        songSizer->Add(playingTime, 1, wxALL | wxEXPAND, 5);
+        songSizer->Add(likeButton, 0, wxALL, 5);
+        songSizer->Add(settingsButton, 0, wxALL, 5);
+
+        songListSizer->Add(songSizer, 0, wxEXPAND | wxALL, 5);
+    }
+
+    mainPanel->SetSizer(songListSizer);
+    mainPanel->Layout();
+    mainPanel->Refresh();
+}
+
+void MyFrame::DisplayAlbum()
+{
+    previousState = currentState;
+    currentState = FrameState::ALBUM_LIST;
+    mainPanel->DestroyChildren();
+    pm.load_albums();
+
+    wxBoxSizer* albumListSizer = new wxBoxSizer(wxVERTICAL);
+    int buttonWidth = 25;
+    int buttonHeight = 25;
+    wxBitmap playBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/play.png", buttonWidth, buttonHeight);
+    wxBitmap settingsBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/settings.png", buttonWidth, buttonHeight);
+    wxBitmap plusBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/plus.png", buttonWidth, buttonHeight);
+    wxBitmap likeBitmap;
+    wxButton* backButton = new wxButton(mainPanel, wxID_ANY, "Back");
+    backButton->Bind(wxEVT_BUTTON, &MyFrame::OnBackButton, this);
+
+    for (const Album& album : pm.albums) {
+        wxBoxSizer* albumSizer = new wxBoxSizer(wxHORIZONTAL);
+
+        wxStaticText* albumName = new wxStaticText(mainPanel, wxID_ANY, wxString::Format("Name: %s", album.name.c_str()));
+        pm.add_real_music_to_album(album);
+        album.compute_listen_time();
+        wxStaticText* playingTime = new wxStaticText(mainPanel, wxID_ANY, wxString::Format("Playing time: %s", album.listen_time.c_str()));
+
+        wxBitmapButton* playButton = new wxBitmapButton(mainPanel, wxID_ANY, playBitmap);
+        wxBitmapButton* settingsButton = new wxBitmapButton(mainPanel, wxID_ANY, settingsBitmap);
+        wxBitmapButton* addToQueueButton = new wxBitmapButton(mainPanel, wxID_ANY, plusBitmap);
+
+        if (album.status_of_liked == 1) {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/liked.png", buttonWidth, buttonHeight);
+        } else if (album.status_of_liked == -1) {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/disliked.png", buttonWidth, buttonHeight);
+        } else {
+            likeBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/reset.png", buttonWidth, buttonHeight);
+        }
+        wxBitmapButton* likeButton = new wxBitmapButton(mainPanel, wxID_ANY, likeBitmap);
+
+        addToQueueButton->SetClientData(new Album(album));
+        playButton->Bind(wxEVT_BUTTON, &MyFrame::OnPlayButton, this);
+        settingsButton->Bind(wxEVT_BUTTON, &MyFrame::OnSettingsButton, this);
+        likeButton->Bind(wxEVT_BUTTON, &MyFrame::OnLikeButton, this);
+        addToQueueButton->Bind(wxEVT_BUTTON, &MyFrame::OnAddToQueueButton, this);
+
+        albumSizer->Add(playButton, 0, wxALL, 5);
+        albumSizer->Add(albumName, 1, wxALL | wxEXPAND, 5);
+        albumSizer->Add(playingTime, 1, wxALL | wxEXPAND, 5);
+        albumSizer->Add(likeButton, 0, wxALL, 5);
+        albumSizer->Add(addToQueueButton, 0, wxALL, 5);
+        albumSizer->Add(settingsButton, 0, wxALL, 5);
+
+        albumListSizer->Add(albumSizer, 0, wxEXPAND | wxALL, 5);
+    }
+
+    mainPanel->SetSizer(albumListSizer);
+    mainPanel->Layout();
+    mainPanel->Refresh();
+}
+
+void MyFrame::OnPlayButton(wxCommandEvent &event)
+{
+    wxBitmapButton* button = dynamic_cast<wxBitmapButton*>(event.GetEventObject());
+    Music* music = static_cast<Music*>(button->GetClientData());
+    
+    pm.playing_queue.add_to_start(music);
+
+    UpdatePlayButtonUI(button, true);
+}
+
+void MyFrame::OnPlayAlbumButton(wxCommandEvent &event)
+{
+    wxBitmapButton* button = dynamic_cast<wxBitmapButton*>(event.GetEventObject());
+    Album* album = static_cast<Album*>(button->GetClientData());
+    
+    pm.playing_queue.merge_queues(album->order_of_songs);
+
+    UpdatePlayButtonUI(button, true);
+}
+
+
+void MyFrame::OnSettingsButton(wxCommandEvent &event)
+{
+    wxBitmapButton* button = dynamic_cast<wxBitmapButton*>(event.GetEventObject());
+    Music* music = static_cast<Music*>(button->GetClientData());
+
+    SettingsDialog* dialog = new SettingsDialog(this, music->name, music->author);
+    
+    if (dialog->ShowModal() == wxID_DELETE)
+    {
+        pm.delete_music(music->path_to_file);
+    }
+    else if (dialog->ShowModal() == wxID_REMOVE)
+    {
+        pm.remove_music_from_db(music->name);
+    }
+    else if (dialog->ShowModal() == wxID_UPDATE)
+    {
+        
+        wxString newName = dialog->GetName();
+        wxString newAuthor = dialog->GetAuthor();
+
+        
+        music->name = std::string(newName.mb_str());
+        music->author = std::string(newAuthor.mb_str());
+
+        pm.update_music(music);
+    }
+    else if (dialog->ShowModal() == wxID_ADD_TO_ALBUM)
+    {
+        std::vector<Album> albums = pm.get_all_albums();
+        AlbumSelectionDialog albumDialog(this, albums, music);
+        if (albumDialog.ShowModal() == wxID_OK)
+    {
+        OnBackButton();
+    }
+    }
+     else if(dialog->ShowModal() == wxID_RemoveFromAlbum)
+    {
+        std::vector<Album> albums = pm.get_all_albums();
+        AlbumSelectionDialog albumDialog(this, albums, music);
+        if (albumDialog.ShowModal() == wxID_OK)
+    }
+
+    dialog->Destroy();
+}
+
+void MyFrame::OnSettingsButtonAlbum(wxCommandEvent &event)
+{
+    wxBitmapButton* button = dynamic_cast<wxBitmapButton*>(event.GetEventObject());
+    Album* album = static_cast<Album*>(button->GetClientData());
+
+    AlbumSettingsDialog* dialog = new AlbumSettingsDialog(this, album->name);
+
+    if (dialog->ShowModal() == ID_DELETE)
+    {
+        pm.delete_album(album->name);  
+    }
+    else if (dialog->ShowModal() == ID_REMOVE)
+    {
+        pm.remove_album_from_db(album->name);
+    }
+    else if (dialog->ShowModal() == ID_UPDATE)
+    {
+        wxString newName = dialog->GetNewAlbumName();
+        album->name = std::string(newName.mb_str());
+        pm.update_album(album);  
+    }
+
+    dialog->Destroy();
+}
+
+
+void MyFrame::OnLikeButton(wxCommandEvent &event)
+{
+    wxBitmapButton* button = dynamic_cast<wxBitmapButton*>(event.GetEventObject());
+    Music* music = static_cast<Music*>(button->GetClientData());
+
+    if (music->status_of_liked == Music::LIKED)
+    {
+
+        music->status_of_liked = Music::NONE; 
+    }
+    else
+    {
+
+        music->status_of_liked = Music::LIKED;
+    }
+
+
+    pm.update_music(music);
+
+
+    UpdateLikeButtonUI(button, music->status_of_liked);
+}
+
+void MyFrame::OnLikeAlbumButton(wxCommandEvent &event)
+{
+    
+    wxBitmapButton* button = dynamic_cast<wxBitmapButton*>(event.GetEventObject());
+    Album* album = static_cast<Album*>(button->GetClientData());
+
+    
+    if (album->status_of_liked == Album::LIKED)
+    {
+        album->status_of_liked = Album::NONE; 
+    }
+    else
+    {
+        album->status_of_liked = Album::LIKED;
+    }
+
+    
+    pm.update_album(album);
+
+    
+    UpdateAlbumButtonUI(button, album->status_of_liked);
+}
+
+void MyFrame::UpdateAlbumButtonUI(wxBitmapButton* button, Album::Status status)
+{
+    
+    if (status == Album::LIKED)
+    {
+        button->SetBitmap(wxBitmap("like.png", wxBITMAP_TYPE_PNG));  
+    }
+    else
+    {
+        button->SetBitmap(wxBitmap("reset.png", wxBITMAP_TYPE_PNG)); 
+    }
+}
+
+
+void MyFrame::UpdateLikeButtonUI(wxBitmapButton* button, Music::Status status)
+{
+    if (status == Music::LIKED)
+    {
+        button->SetBitmap(wxBitmap("like.png", wxBITMAP_TYPE_PNG)); 
+    }
+    else
+    {
+        button->SetBitmap(wxBitmap("reset.png", wxBITMAP_TYPE_PNG)); 
+    }
+}
+
+
+void MyFrame::OnAddToQueueButton(wxCommandEvent &event)
+{
+
+    wxBitmapButton* button = dynamic_cast<wxBitmapButton*>(event.GetEventObject());
+
+    if (button != nullptr) {
+
+        Album* album = static_cast<Album*>(button->GetClientData());
+
+        if (album != nullptr) {
+            pm.playing_queue.merge_queues(album.order_of_songs);
+        }
+    }
+}
+
+
 wxBitmap MyFrame::LoadBitmap(const wxString& filename, int width, int height)
 {
     wxImage image;
     image.LoadFile(filename, wxBITMAP_TYPE_PNG);
     image.Rescale(width, height, wxIMAGE_QUALITY_HIGH);
     return wxBitmap(image);
+}
+
+void MyFrame::OnBackButton(wxCommandEvent& event) {
+    switch (previousState) {
+        case FrameState::MAIN_MENU:
+            MyFrame();
+            break;
+        case FrameState::SONG_LIST:
+            DisplaySongs();
+            break;
+        case FrameState::ALBUM_LIST:
+            DisplayAlbum();
+            break;
+        case FrameState::ALBUM_SONGS:
+
+            break;
+    }
+}
+
+#include <wx/wx.h>
+
+#include <wx/log.h>
+
+
+const wxWindowID wxID_RemoveFromAlbum = wxNewId();
+
+SettingsDialog::SettingsDialog(wxWindow* parent, wxWindowID id)
+    : wxDialog(parent, id, "Settings", wxDefaultPosition, wxSize(300, 200))
+{
+    wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
+
+    wxButton* deleteButton = new wxButton(this, wxID_DELETE, "Delete");
+    wxButton* removeButton = new wxButton(this, wxID_REMOVE, "Remove");
+    wxButton* addToAlbumButton = new wxButton(this, wxID_ADD_TO_ALBUM, "Add to Album");
+    wxButton* updateButton = new wxButton(this, wxID_UPDATE, "Update");
+    wxButton* removeFromAlbumButton = new wxButton(this, wxID_RemoveFromAlbum, "Remove from Album");
+
+    
+    sizer->Add(deleteButton, 0, wxALL, 10);
+    sizer->Add(removeButton, 0, wxALL, 10);
+    sizer->Add(addToAlbumButton, 0, wxALL, 10);
+    sizer->Add(updateButton, 0, wxALL, 10);
+    sizer->Add(removeFromAlbumButton, 0, wxALL, 10);
+
+    
+    deleteButton->Bind(wxEVT_BUTTON, &SettingsDialog::OnDelete, this);
+    removeButton->Bind(wxEVT_BUTTON, &SettingsDialog::OnRemove, this);
+    addToAlbumButton->Bind(wxEVT_BUTTON, &SettingsDialog::OnAddAlbum, this);
+    updateButton->Bind(wxEVT_BUTTON, &SettingsDialog::OnUpdate, this);
+    removeFromAlbumButton->Bind(wxEVT_BUTTON, &SettingsDialog::OnRemoveFromAlbum, this);
+
+    SetSizer(sizer);
+}
+
+void SettingsDialog::OnDelete(wxCommandEvent& event)
+{
+    wxLogMessage("Delete button clicked");
+    EndModal(wxID_DELETE);
+}
+
+void SettingsDialog::OnRemove(wxCommandEvent& event)
+{
+    wxLogMessage("Remove button clicked");
+    EndModal(wxID_REMOVE);
+}
+
+void SettingsDialog::OnUpdate(wxCommandEvent& event)
+{
+    wxLogMessage("Update button clicked");
+    EndModal(wxID_UPDATE);
+}
+
+void SettingsDialog::OnAddAlbum(wxCommandEvent& event)
+{
+    wxLogMessage("Add to Album button clicked");
+    EndModal(wxID_ADD_TO_ALBUM);
+}
+
+
+void SettingsDialog::OnRemoveFromAlbum(wxCommandEvent& event)
+{
+    wxLogMessage("Remove from Album button clicked");
+    EndModal(wxID_RemoveFromAlbum);
+}
+
+
+void MyFrame::UpdatePlayButtonUI(wxBitmapButton* button, bool isPlaying)
+{
+    wxBitmap newBitmap;
+    if (isPlaying)
+    {
+        newBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/pause.png", buttonWidth, buttonHeight);
+    }
+    else
+    {
+        newBitmap = LoadBitmap("/Users/alexanderkorzh/Desktop/coding/musical_player/images/play.png", buttonWidth, buttonHeight);
+    }
+    button->SetBitmap(newBitmap);
 }

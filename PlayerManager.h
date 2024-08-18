@@ -44,8 +44,8 @@ public:
 
     std::vector<Album> albums;
     std::vector<Music> music;
-private:
     PlayingQueue playing_queue;
+private:
     pqxx::connection connection;
 };
 
