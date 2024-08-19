@@ -25,6 +25,7 @@ public:
     void delete_album(const Album& album);
     void delete_music(const std::string& music_path);
     void load_songs();
+    void remove_music_from_album(const Album& album,const Music& music);
     void load_albums();
     void update_song(const Music& music);
     void update_album(const Album& album);

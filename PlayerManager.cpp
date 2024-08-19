@@ -215,6 +215,43 @@ void PlayerManager::load_songs() {
     txn.commit();
 }
 
+void PlayerManager::remove_music_from_album(const Album& album, const Music& music) {
+    pqxx::work txn{connection};
+
+    
+    int album_id;
+    pqxx::result album_id_result = txn.exec_params(
+        "SELECT id FROM ALBUMS WHERE name = $1", album.name);
+    
+    if (album_id_result.size() > 0) {
+        album_id = album_id_result[0]["id"].as<int>();
+    } else {
+        std::cerr << "Album not found in the database." << std::endl;
+        return;
+    }
+
+    
+    int music_id;
+    pqxx::result music_id_result = txn.exec_params(
+        "SELECT id FROM MUSIC WHERE name = $1 AND author = $2", music.name, music.author);
+    
+    if (music_id_result.size() > 0) {
+        music_id = music_id_result[0]["id"].as<int>();
+    } else {
+        std::cerr << "Music not found in the database." << std::endl;
+        return;
+    }
+
+
+    txn.exec_params(
+        "DELETE FROM ALBUM_MUSIC WHERE album_id = $1 AND music_id = $2",
+        album_id,
+        music_id
+    );
+
+    txn.commit();
+}
+
 
 void PlayerManager::delete_music(const std::string& music_path) {
     if (std::filesystem::exists(music_path)) { 
