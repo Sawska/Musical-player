@@ -17,9 +17,9 @@ public:
     int size() const;
     void shuffle();
     Music pop();
+    std::queue<Music> queue;
 
 private:
-    std::queue<Music> queue;
 };
 
 #endif

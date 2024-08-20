@@ -27,9 +27,23 @@ include(${wxWidgets_USE_FILE})
 # Main application
 add_executable(MyApp
     main.cpp 
-    Music.cpp Album.cpp Album.h Music.h PlayerManager.cpp
-    PlayerManager.h PlayingQueue.cpp PlayingQueue.h
+    Album.cpp
+    Album.h
+    AlbumSelectionDialog.cpp
+    AlbumSelectionDialog.h
+    AlbumSettingsDialog.cpp
+    AlbumSettingsDialog.h
+    Music.cpp
+    Music.h
+    PlayerManager.cpp
+    PlayerManager.h
+    PlayingQueue.cpp
+    PlayingQueue.h
+    SearchResultsDialog.cpp
+    SearchResultsDialog.h
+    SettingsDialog.cpp
 )
+
 
 target_link_libraries(MyApp
     ${wxWidgets_LIBRARIES}
@@ -41,12 +55,26 @@ target_link_libraries(MyApp
 
 # Tests
 add_executable(MyAppTests
-    test_PlayerManager.cpp  # Your test file
-    Music.cpp
+    test_PlayerManager.cpp 
     Album.cpp
+    Album.h
+    AlbumSelectionDialog.cpp
+    AlbumSelectionDialog.h
+    AlbumSettingsDialog.cpp
+    AlbumSettingsDialog.h
+    main.cpp
+    Music.cpp
+    Music.h
     PlayerManager.cpp
+    PlayerManager.h
     PlayingQueue.cpp
+    PlayingQueue.h
+    SearchResultsDialog.cpp
+    SearchResultsDialog.h
+    SettingsDialog.cpp
+
 )
+
 
 target_link_libraries(MyAppTests
     Catch2::Catch2

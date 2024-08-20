@@ -31,9 +31,14 @@ public:
     void update_album(const Album& album);
     void create_table_music();
     void create_table_album();
+    std::vector<std::string> search(std::string input);
+    std::vector<std::string> search_songs(std::string input);
+    std::vector<std::string> search_albums(std::string input);
     void add_real_music_to_album(const Album& album);
     std::vector<Music> load_filtered_song(FilterType filter);
     std::vector<Album> load_filtered_albums(FilterType filter);
+    Music load_music(std::string name);
+    Album load_album(std::string name);
 
     PlayerManager() 
         : connection("postgresql://music_player@localhost") 

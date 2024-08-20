@@ -31,6 +31,26 @@ void PlayerManager::create_table_music() {
     txn.commit();
 }
 
+Music PlayerManager::load_music(std::string name) {
+    pqxx::work txn{connection};
+    pqxx::result music_res = txn.exec_params(
+        "SELECT name, author, status_of_liked, time_to_listen, path_to_file FROM MUSIC WHERE name = $1",
+        name
+    );
+
+    Music music;
+    
+    if (!music_res.empty()) {
+        music.name = music_res[0]["name"].as<std::string>();
+        music.author = music_res[0]["author"].as<std::string>();
+        music.status_of_liked = music_res[0]["status_of_liked"].as<int>();
+        music.time_to_listen = music_res[0]["time_to_listen"].as<int>();
+        music.path_to_file = music_res[0]["path_to_file"].as<std::string>();
+    }
+
+    return music;
+}
+
 
 
 void PlayerManager::create_table_album() {
@@ -96,6 +116,41 @@ void PlayerManager::add_music_to_album(const Album& album, const Music& music) {
     );
 
     txn.commit();
+}
+
+std::vector<std::string> PlayerManager::search_songs(std::string input) {
+    std::vector<std::string> result;
+    load_songs();
+    for (const Music& music_entry : music) {
+        if (music_entry.name.find(input) != std::string::npos) { 
+            result.push_back(music_entry.name);
+        }
+    }
+    return result;
+}
+
+std::vector<std::string> PlayerManager::search_albums(std::string input) {
+    std::vector<std::string> result;
+    load_songs();
+    for (const Album& album : albums) {
+        if (album.name.find(input) != std::string::npos) { 
+            result.push_back(album.name);
+        }
+    }
+    return result;
+}
+
+std::vector<std::string> PlayerManager::search(std::string input) {
+    std::vector<std::string> result;
+    
+
+    std::vector<std::string> songs = search_songs(input);
+    std::vector<std::string> albums = search_albums(input);
+    
+    result.insert(result.end(), songs.begin(), songs.end());
+    result.insert(result.end(), albums.begin(), albums.end());
+    
+    return result;
 }
 
 
@@ -214,6 +269,29 @@ void PlayerManager::load_songs() {
 
     txn.commit();
 }
+
+Album PlayerManager::load_album(std::string name) {
+    pqxx::work txn{connection};
+
+    pqxx::result result = txn.exec_params(
+        "SELECT name, status_of_liked, time_to_listen FROM ALBUMS WHERE name = $1",
+        name
+    );
+
+    Album album(name);
+    
+    if (!result.empty()) {
+        album.name = result[0]["name"].as<std::string>();
+        album.status_of_liked = result[0]["status_of_liked"].as<int>();
+        album.time_to_listen = result[0]["time_to_listen"].as<int>();
+
+
+        this->add_real_music_to_album(album);
+    }
+
+    return album;
+}
+
 
 void PlayerManager::remove_music_from_album(const Album& album, const Music& music) {
     pqxx::work txn{connection};

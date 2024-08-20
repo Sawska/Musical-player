@@ -2,20 +2,18 @@
 #define ALBUMSETTINGSDIALOG_H
 
 #include <wx/wx.h>
-#include "Album.h"
 
 class AlbumSettingsDialog : public wxDialog
 {
 public:
     AlbumSettingsDialog(wxWindow* parent, const wxString& albumName);
-
+    ~AlbumSettingsDialog(); 
     
     wxString GetNewAlbumName() const;
 
 private:
     wxTextCtrl* albumNameCtrl;
 
-    
     void OnDelete(wxCommandEvent& event);
     void OnRemove(wxCommandEvent& event);
     void OnUpdate(wxCommandEvent& event);
