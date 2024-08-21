@@ -28,10 +28,7 @@ AlbumSelectionDialog::AlbumSelectionDialog(wxWindow* parent, const std::vector<A
     SetSizer(sizer);
 }
 
-AlbumSelectionDialog::~AlbumSelectionDialog()
-{
-    
-}
+
 
 wxString AlbumSelectionDialog::GetSelectedAlbum() const
 {

@@ -17,7 +17,6 @@ class AlbumSelectionDialog : public wxDialog
 {
 public:
     AlbumSelectionDialog(wxWindow* parent, const std::vector<Album>& albums, Music* music);
-    virtual ~AlbumSelectionDialog();
 
     wxString GetSelectedAlbum() const;
     

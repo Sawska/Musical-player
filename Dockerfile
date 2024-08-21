@@ -1,3 +1,4 @@
+
 FROM alpine:3.17.0 AS build
 
 
@@ -9,7 +10,8 @@ RUN apk update && \
         libpqxx-dev=7.6.0-r0 \
         sfml-audio=2.5.0-r0 \
         sfml-system=2.5.0-r0 \
-        wxWidgets=3.1.7-r0
+        wxWidgets=3.1.7-r0 \
+        catch2=2.13.10-r0  # Assuming Catch2 is available, adjust as needed
 
 
 WORKDIR /musical_player

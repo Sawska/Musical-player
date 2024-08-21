@@ -30,6 +30,8 @@ AlbumSettingsDialog::AlbumSettingsDialog(wxWindow* parent, const wxString& album
     SetSizerAndFit(mainSizer);
 }
 
+
+
 wxString AlbumSettingsDialog::GetNewAlbumName() const
 {
     return albumNameCtrl->GetValue();

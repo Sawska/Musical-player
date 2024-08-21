@@ -1,5 +1,5 @@
 #include "SearchResultsDialog.h"
-#include "main.cpp"
+#include "MyFrame.h"
 
 wxBEGIN_EVENT_TABLE(SearchResultsDialog, wxDialog)
     EVT_LISTBOX(wxID_ANY, SearchResultsDialog::OnItemSelected)

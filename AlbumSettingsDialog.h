@@ -7,7 +7,6 @@ class AlbumSettingsDialog : public wxDialog
 {
 public:
     AlbumSettingsDialog(wxWindow* parent, const wxString& albumName);
-    ~AlbumSettingsDialog(); 
     
     wxString GetNewAlbumName() const;
 

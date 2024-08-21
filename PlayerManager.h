@@ -9,6 +9,7 @@
 #include <iostream>
 #include <pqxx/pqxx>
 
+
     enum FilterType {
         LIKED = 1,
         DISLIKED = -1
