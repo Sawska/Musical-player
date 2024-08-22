@@ -4,34 +4,30 @@ project(MyApp)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Find and configure SFML
+find_package(SFML 2.5 COMPONENTS audio system REQUIRED)
 
+# Find Catch2
+find_package(Catch2 2.13 REQUIRED)
 
+# Find wxWidgets
+find_package(wxWidgets REQUIRED COMPONENTS core base)
+include(${wxWidgets_USE_FILE})
 
+# Manually set pqxx paths
+set(PQXX_INCLUDE_DIR "/usr/include/pqxx")  # Adjust this path if necessary
+set(PQXX_LIBRARY "/usr/lib/aarch64-linux-gnu/libpqxx.so")  # Path to the shared library or static library
 
-find_package(SFML REQUIRED COMPONENTS audio system)
-find_package(Catch2 REQUIRED)
+# Check if pqxx paths are valid
+if(EXISTS ${PQXX_INCLUDE_DIR} AND EXISTS ${PQXX_LIBRARY})
+    set(PQXX_FOUND TRUE)
+    message(STATUS "Found pqxx: ${PQXX_LIBRARY}")
+else()
+    set(PQXX_FOUND FALSE)
+    message(FATAL_ERROR "Could not find pqxx library.")
+endif()
 
-
-include_directories(
-    /opt/homebrew/include
-    /opt/homebrew/Cellar/libpqxx/7.9.2/include
-    /opt/homebrew/Cellar/postgresql@14/14.12/include
-    /opt/homebrew/Cellar/nlohmann-json/3.11.3/include
-    /Users/alexanderkorzh/Downloads/wxWidgets-3.2.5/include
-)
-
-
-link_directories(
-    /opt/homebrew/lib
-    /opt/homebrew/Cellar/libpqxx/7.9.2/lib
-    /opt/homebrew/Cellar/postgresql@14/14.12/lib/postgresql@14
-    /Users/alexanderkorzh/Downloads/wxWidgets-3.2.5/lib
-)
-
-
-
-
-
+# Define the main executable
 add_executable(MyApp
     MyApp.cpp                
     Album.cpp
@@ -54,15 +50,15 @@ add_executable(MyApp
     MyFrameIDs.h
 )
 
+# Link libraries for the main executable
 target_link_libraries(MyApp
-    
-    pq
-    pqxx
     sfml-audio
     sfml-system
+    ${PQXX_LIBRARY}
+    ${wxWidgets_LIBRARIES}
 )
 
-# Tests
+# Define the test executable
 add_executable(MyAppTests
     test_PlayerManager.cpp 
     Album.cpp
@@ -85,13 +81,30 @@ add_executable(MyAppTests
     MyFrameIDs.h
 )
 
+# Link libraries for the test executable
 target_link_libraries(MyAppTests
     Catch2::Catch2
-    pq
-    pqxx
     sfml-audio
     sfml-system
+    ${PQXX_LIBRARY}
+    ${wxWidgets_LIBRARIES}
 )
 
+# Enable testing
 enable_testing()
 add_test(NAME MyAppTests COMMAND MyAppTests)
+
+# Specify include directories for targets
+target_include_directories(MyApp PRIVATE
+    ${SFML_INCLUDE_DIR}
+    ${CATCH2_INCLUDE_DIR}
+    ${wxWidgets_INCLUDE_DIRS}
+    ${PQXX_INCLUDE_DIR}
+)
+
+target_include_directories(MyAppTests PRIVATE
+    ${SFML_INCLUDE_DIR}
+    ${CATCH2_INCLUDE_DIR}
+    ${wxWidgets_INCLUDE_DIRS}
+    ${PQXX_INCLUDE_DIR}
+)

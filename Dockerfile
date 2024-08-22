@@ -1,43 +1,76 @@
+# Build Stage
+FROM ubuntu:22.04 AS build
 
-FROM alpine:3.17.0 AS build
+# Set the time zone to Etc/UTC
+ENV DEBIAN_FRONTEND=noninteractive
 
+# Install tzdata to configure time zone
+RUN apt-get update && apt-get install -y tzdata
 
-RUN apk update && \
-    apk add --no-cache \
-        build-base=0.5-r3 \
-        cmake=3.24.3-r0 \
-        postgresql-dev=14.5-r0 \
-        libpqxx-dev=7.6.0-r0 \
-        sfml-audio=2.5.0-r0 \
-        sfml-system=2.5.0-r0 \
-        wxWidgets=3.1.7-r0 \
-        catch2=2.13.10-r0  # Assuming Catch2 is available, adjust as needed
+# Set the time zone and reconfigure tzdata
+RUN echo "Etc/UTC" > /etc/timezone && \
+    dpkg-reconfigure -f noninteractive tzdata
 
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    wget \
+    git \
+    postgresql \
+    postgresql-contrib \
+    libpq-dev \
+    postgresql-server-dev-all \
+    libsfml-dev \
+    libwxgtk3.0-gtk3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
+# Install pqxx from source if necessary
+RUN wget https://github.com/jtv/libpqxx/archive/refs/tags/7.7.5.tar.gz && \
+    tar -xzf 7.7.5.tar.gz && \
+    cd libpqxx-7.7.5 && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make && \
+    make install
+
+# Install Catch2
+RUN wget https://github.com/catchorg/Catch2/archive/v2.13.10.tar.gz && \
+    tar -xzf v2.13.10.tar.gz && \
+    cd Catch2-2.13.10 && \
+    cmake -S . -B build && \
+    cmake --build build --target install
+
+# Set the working directory
 WORKDIR /musical_player
 
+# Copy your project files into the container
+COPY . .
 
-COPY src/ ./src
-COPY CMakeLists.txt .
+# Remove any existing CMake cache files
+RUN rm -rf build
 
+# Configure paths
+ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
+ENV CMAKE_PREFIX_PATH="/usr/local;/usr"
 
+# Build your project
 RUN cmake -S . -B build && \
     cmake --build build --target MyApp
 
+# Runtime Stage
+FROM ubuntu:22.04
 
-FROM alpine:3.17.0
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    libsfml-dev \
+    libwxgtk3.0-gtk3 \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy the built application from the build stage
+# COPY --from=build /musical_player/build/MyApp /usr/local/bin/MyApp
 
-RUN apk add --no-cache \
-        boost1.80=1.80.0-r3 \
-        postgresql-libs=14.5-r0 \
-        libpqxx=7.6.0-r0 \
-        sfml-audio=2.5.0-r0 \
-        sfml-system=2.5.0-r0 \
-        wxWidgets=3.1.7-r0
-
-
-COPY --from=build /musical_player/build/MyApp /usr/local/bin/MyApp
-
-
+# Set the entry point
 ENTRYPOINT [ "/usr/local/bin/MyApp" ]
